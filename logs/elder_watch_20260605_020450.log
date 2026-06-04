@@ -1,0 +1,8 @@
+[02:04:50] INFO     root                 Logging initialized → logs/elder_watch_20260605_020450.log
+[02:04:50] INFO     ElderWatch           Initializing Elder Watch System...
+[02:04:50] INFO     src.preprocessing.frame_processor FrameProcessor: resize=(640,640), CLAHE=True, blur=3
+[02:04:51] INFO     src.detection.yolo_detector Loading TFLite model: models/quantized/yolov8n_fall_int8.tflite
+[02:04:51] INFO     src.detection.yolo_detector TFLite model loaded. dtype=float32, scale=1.000000, zp=0
+[02:04:51] INFO     src.pose.mediapipe_pose MediaPipe version: 0.10.35
+[02:04:51] INFO     src.pose.mediapipe_pose Downloading MediaPipe pose model → /home/muscle_hyper/.cache/mediapipe/pose_landmarker_lite.task
+[02:04:54] INFO     src.pose.mediapipe_pose New Tasks API not available (module 'mediapipe.tasks.python.vision' has no attribute 'Image'), falling back to legacy mp.solutions...

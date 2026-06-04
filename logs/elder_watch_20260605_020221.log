@@ -1,0 +1,5 @@
+[02:02:21] INFO     root                 Logging initialized → logs/elder_watch_20260605_020221.log
+[02:02:21] INFO     ElderWatch           Initializing Elder Watch System...
+[02:02:21] INFO     src.preprocessing.frame_processor FrameProcessor: resize=(640,640), CLAHE=True, blur=3
+[02:02:22] INFO     src.detection.yolo_detector Loading TFLite model: models/quantized/yolov8n_fall_int8.tflite
+[02:02:22] INFO     src.detection.yolo_detector TFLite model loaded. dtype=float32, scale=1.000000, zp=0

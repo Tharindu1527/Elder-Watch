@@ -135,13 +135,36 @@ def train(args):
         patience=15,                # Early stopping patience
     )
 
-    best_model = Path(project_dir) / run_name / "weights" / "best.pt"
+    # Find best.pt — search broadly because Ultralytics sometimes
+    # doubles the project path (runs/detect/runs/detect/elder_watch)
+    best_model = None
+    candidates = [
+        Path(project_dir) / run_name / "weights" / "best.pt",
+        Path(project_dir) / project_dir / run_name / "weights" / "best.pt",
+    ]
+    for c in candidates:
+        if c.exists():
+            best_model = c
+            break
+    if best_model is None:
+        found = list(Path(".").rglob("best.pt"))
+        if found:
+            best_model = max(found, key=lambda p: p.stat().st_mtime)
+
+    if best_model is None:
+        logger.error(
+            "Could not locate best.pt. Copy it manually:\n"
+            "  find . -name best.pt\n"
+            "  cp <path> models/finetuned/yolov8n_fall.pt"
+        )
+        return results
+
     logger.info(f"Training complete. Best model: {best_model}")
 
     # Copy to models/finetuned/
     os.makedirs("models/finetuned", exist_ok=True)
     dest = "models/finetuned/yolov8n_fall.pt"
-    shutil.copy(best_model, dest)
+    shutil.copy(str(best_model), dest)
     logger.info(f"Saved to: {dest}")
 
     # Optionally export to ONNX + TFLite

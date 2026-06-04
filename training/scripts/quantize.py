@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
 """
-Quantization Script: Post-Training Quantization (PTQ) to INT8 TFLite
-University of Ruhuna - EE7204/EC7205
+Quantization Script — Fixed for RTX 5090 / CUDA 13.0
+Uses Ultralytics built-in TFLite INT8 export instead of raw TF PTQ pipeline.
+TensorFlow's manual PTQ causes segfault on CUDA 13+ because TF doesn't
+support CUDA 13 yet (TF 2.x supports up to CUDA 12.x).
 
-Pipeline:
-  YOLOv8 .pt  →  ONNX  →  TensorFlow SavedModel  →  INT8 TFLite
-
-Expected results:
-  - Size:      ~25 MB (FP32) → ~6-7 MB (INT8)  [~75% reduction]
-  - Speed:     ~50 ms/frame  → ~20 ms/frame on RPi 5
-  - Accuracy:  <2% mAP drop
+Pipeline:  YOLOv8 .pt  →  TFLite INT8  (via Ultralytics)
+Expected:  ~6.2 MB (FP32)  →  ~1.6 MB (INT8)
+           ~50 ms/frame    →  ~20 ms/frame on RPi 5
 
 Usage:
   python training/scripts/quantize.py \
@@ -21,14 +19,9 @@ Usage:
 import argparse
 import logging
 import os
-import glob
-import random
+import shutil
+import time
 from pathlib import Path
-from typing import Generator
-
-import cv2
-import numpy as np
-import yaml
 
 logging.basicConfig(level=logging.INFO,
                     format="[%(asctime)s] %(levelname)s %(message)s")
@@ -36,248 +29,205 @@ logger = logging.getLogger("Quantize")
 
 
 def parse_args():
-    p = argparse.ArgumentParser(description="INT8 PTQ for Raspberry Pi deployment")
-    p.add_argument("--model",    required=True,  help="Path to fine-tuned .pt model")
-    p.add_argument("--data",     required=True,  help="Dataset YAML for calibration images")
-    p.add_argument("--out",      default="models/quantized/yolov8n_fall_int8.tflite")
-    p.add_argument("--cal-size", type=int, default=1000, help="Calibration sample count")
-    p.add_argument("--imgsz",    type=int, default=640)
-    p.add_argument("--method",   choices=["PTQ", "QAT"], default="PTQ")
+    p = argparse.ArgumentParser()
+    p.add_argument("--model",  required=True,
+                   help="Path to fine-tuned .pt  e.g. models/finetuned/yolov8n_fall.pt")
+    p.add_argument("--data",   required=True,
+                   help="Dataset YAML e.g. training/configs/dataset.yaml")
+    p.add_argument("--out",    default="models/quantized/yolov8n_fall_int8.tflite",
+                   help="Output TFLite path")
+    p.add_argument("--imgsz",  type=int, default=640)
     return p.parse_args()
 
 
-# ──────────────────────────────────────────────────────────────────────
-# Step 1: Export .pt → ONNX → TensorFlow SavedModel
-# ──────────────────────────────────────────────────────────────────────
+# ════════════════════════════════════════════════════════════════════
+# Method A — Ultralytics built-in INT8 TFLite export (RECOMMENDED)
+# Does NOT use TensorFlow directly → no segfault on CUDA 13
+# ════════════════════════════════════════════════════════════════════
 
-def export_to_tf_savedmodel(pt_path: str, imgsz: int) -> str:
-    """Export YOLOv8 .pt to TensorFlow SavedModel format."""
-    try:
-        from ultralytics import YOLO
-    except ImportError:
-        raise RuntimeError("pip install ultralytics")
-
-    logger.info(f"Exporting {pt_path} → TF SavedModel...")
-    model = YOLO(pt_path)
-    
-    # Export to TF SavedModel (via ONNX internally)
-    # This creates <model_dir>/<name>_saved_model/
-    saved_model_path = model.export(
-        format="saved_model",
-        imgsz=imgsz,
-        half=False,           # FP32 for PTQ calibration
-        int8=False,           # We do INT8 manually for more control
-        dynamic=False,
-        simplify=True,
-        nms=False,            # We apply NMS post-inference
-    )
-    logger.info(f"TF SavedModel exported: {saved_model_path}")
-    return str(saved_model_path)
-
-
-# ──────────────────────────────────────────────────────────────────────
-# Step 2: Calibration dataset generator
-# ──────────────────────────────────────────────────────────────────────
-
-def load_calibration_images(data_yaml: str, n_samples: int, imgsz: int) -> list:
-    """Load calibration images from training set."""
-    with open(data_yaml) as f:
-        data_cfg = yaml.safe_load(f)
-
-    base_dir = Path(data_yaml).parent
-    train_dir = base_dir / data_cfg.get("train", "train/images")
-
-    if not train_dir.exists():
-        logger.warning(f"Train dir not found: {train_dir}. Using random noise calibration.")
-        return [np.random.randint(0, 255, (imgsz, imgsz, 3), dtype=np.uint8)
-                for _ in range(n_samples)]
-
-    patterns = ["*.jpg", "*.jpeg", "*.png", "*.bmp"]
-    all_imgs = []
-    for pat in patterns:
-        all_imgs.extend(glob.glob(str(train_dir / "**" / pat), recursive=True))
-
-    if not all_imgs:
-        logger.warning("No calibration images found. Using random noise.")
-        return [np.random.randint(0, 255, (imgsz, imgsz, 3), dtype=np.uint8)
-                for _ in range(n_samples)]
-
-    random.shuffle(all_imgs)
-    selected = all_imgs[:n_samples]
-
-    calibration_data = []
-    for img_path in selected:
-        img = cv2.imread(img_path)
-        if img is None:
-            continue
-        img = cv2.resize(img, (imgsz, imgsz))
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        img = img.astype(np.float32) / 255.0
-        calibration_data.append(img)
-
-    logger.info(f"Loaded {len(calibration_data)} calibration images from {train_dir}")
-    return calibration_data
-
-
-def make_representative_dataset(images: list) -> Generator:
-    """Generator for TFLite converter calibration."""
-    def generator():
-        for img in images:
-            yield [np.expand_dims(img, axis=0)]  # Add batch dim
-    return generator
-
-
-# ──────────────────────────────────────────────────────────────────────
-# Step 3: TFLite INT8 conversion
-# ──────────────────────────────────────────────────────────────────────
-
-def convert_to_int8_tflite(saved_model_path: str,
-                             representative_dataset,
-                             output_path: str,
-                             imgsz: int):
-    """Convert TF SavedModel to INT8 quantized TFLite."""
-    try:
-        import tensorflow as tf
-    except ImportError:
-        raise RuntimeError("pip install tensorflow>=2.12.0")
-
-    logger.info("Starting INT8 PTQ conversion...")
-    converter = tf.lite.TFLiteConverter.from_saved_model(saved_model_path)
-
-    # Full integer quantization (weights + activations)
-    converter.optimizations = [tf.lite.Optimize.DEFAULT]
-    converter.representative_dataset = representative_dataset
-    converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
-    converter.inference_input_type  = tf.int8
-    converter.inference_output_type = tf.int8
-
-    # Allow custom ops (needed for some YOLO layers)
-    converter.allow_custom_ops = True
-    converter.experimental_new_converter = True
-
-    logger.info("Running calibration + conversion (this may take a few minutes)...")
-    tflite_model = converter.convert()
-
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    with open(output_path, "wb") as f:
-        f.write(tflite_model)
-
-    size_mb = os.path.getsize(output_path) / (1024 * 1024)
-    logger.info(f"✓ INT8 TFLite model saved: {output_path} ({size_mb:.2f} MB)")
-    return output_path
-
-
-# ──────────────────────────────────────────────────────────────────────
-# Step 4: Validate the quantized model
-# ──────────────────────────────────────────────────────────────────────
-
-def validate_tflite(tflite_path: str, test_images: list, imgsz: int):
-    """Quick sanity-check: run inference on a few test images."""
-    try:
-        try:
-            import tflite_runtime.interpreter as tflite
-        except ImportError:
-            import tensorflow.lite as tflite
-
-        interp = tflite.Interpreter(model_path=tflite_path, num_threads=4)
-        interp.allocate_tensors()
-        in_det  = interp.get_input_details()[0]
-        out_det = interp.get_output_details()[0]
-
-        in_scale, in_zp = in_det["quantization"]
-        logger.info(f"Input: dtype={in_det['dtype'].__name__}, "
-                    f"scale={in_scale:.6f}, zp={in_zp}")
-        logger.info(f"Output: {out_det['shape']}")
-
-        import time
-        latencies = []
-        for img in test_images[:10]:
-            # Quantize
-            q_img = (img / in_scale + in_zp).clip(-128, 127).astype(np.int8)
-            interp.set_tensor(in_det["index"], q_img[np.newaxis, ...])
-            t0 = time.perf_counter()
-            interp.invoke()
-            latencies.append((time.perf_counter() - t0) * 1000)
-
-        avg_ms = sum(latencies) / len(latencies)
-        logger.info(f"Validation: avg latency = {avg_ms:.1f} ms/frame "
-                    f"(on {os.uname().nodename})")
-        logger.info(f"Projected RPi 5 FPS: ~{1000/avg_ms:.1f} "
-                    f"(actual may differ)")
-
-    except Exception as e:
-        logger.warning(f"Validation failed: {e}")
-
-
-# ──────────────────────────────────────────────────────────────────────
-# Ultralytics shortcut (alternative to manual pipeline)
-# ──────────────────────────────────────────────────────────────────────
-
-def quantize_via_ultralytics(pt_path: str, data_yaml: str, output_path: str, imgsz: int):
+def export_ultralytics(pt_path: str, data_yaml: str,
+                       output_path: str, imgsz: int) -> str:
     """
-    Alternative: Use Ultralytics built-in INT8 TFLite export.
-    Simpler but less control over calibration.
+    Use Ultralytics YOLO.export() to produce INT8 TFLite.
+    Ultralytics handles the ONNX → TFLite conversion internally
+    using onnx2tf which does NOT require a working CUDA TF install.
     """
     from ultralytics import YOLO
+
+    logger.info("=" * 60)
+    logger.info("INT8 Quantization via Ultralytics export")
+    logger.info(f"  Input  : {pt_path}")
+    logger.info(f"  Data   : {data_yaml}")
+    logger.info(f"  Output : {output_path}")
+    logger.info(f"  imgsz  : {imgsz}")
+    logger.info("=" * 60)
+
+    logger.info("Loading model...")
     model = YOLO(pt_path)
+
+    logger.info("Exporting to INT8 TFLite (this takes 2-5 min)...")
+    logger.info("Note: You may see TF/CUDA warnings — these are harmless.")
+
+    t0 = time.time()
+
+    # Force CPU-only for TF operations to avoid CUDA 13 segfault
+    os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+
     exported = model.export(
         format="tflite",
         imgsz=imgsz,
         int8=True,
         data=data_yaml,
+        half=False,
+        simplify=True,
+        nms=False,
     )
-    # Move to output path
-    import shutil
-    shutil.move(str(exported), output_path)
-    size_mb = os.path.getsize(output_path) / (1024 * 1024)
-    logger.info(f"Ultralytics INT8 TFLite: {output_path} ({size_mb:.2f} MB)")
+
+    elapsed = time.time() - t0
+    logger.info(f"Export finished in {elapsed:.0f}s")
+
+    # Ultralytics saves the tflite alongside the pt file
+    # Find it and move to our output path
+    exported_path = find_tflite(pt_path, exported)
+
+    if exported_path is None or not Path(exported_path).exists():
+        raise FileNotFoundError(
+            f"TFLite file not found after export. "
+            f"Expected near: {pt_path}\n"
+            f"Run: find . -name '*.tflite' to locate it manually."
+        )
+
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    shutil.copy2(str(exported_path), output_path)
+
+    size_mb = os.path.getsize(output_path) / 1024 / 1024
+    logger.info(f"✓ INT8 TFLite saved: {output_path}  ({size_mb:.2f} MB)")
     return output_path
 
 
-# ──────────────────────────────────────────────────────────────────────
+def find_tflite(pt_path: str, exported) -> str:
+    """
+    Locate the exported .tflite file.
+    Ultralytics may return the path directly or save it near the .pt file.
+    """
+    # If Ultralytics returned a valid path
+    if exported and isinstance(exported, (str, Path)):
+        p = Path(str(exported))
+        if p.exists() and p.suffix == ".tflite":
+            return str(p)
+        # Sometimes it returns the _saved_model folder; tflite is inside
+        tflite_candidates = list(p.parent.glob("*.tflite")) if p.parent.exists() else []
+        if tflite_candidates:
+            return str(tflite_candidates[0])
+
+    # Search near the .pt file
+    pt_dir  = Path(pt_path).parent
+    pt_stem = Path(pt_path).stem
+
+    search_dirs = [pt_dir, pt_dir.parent, Path(".")]
+    for d in search_dirs:
+        for tflite in d.rglob("*.tflite"):
+            return str(tflite)
+
+    return None
+
+
+# ════════════════════════════════════════════════════════════════════
+# Validation — quick inference test on the quantized model
+# ════════════════════════════════════════════════════════════════════
+
+def validate(tflite_path: str, imgsz: int = 640):
+    """Run 10 dummy inferences to confirm the model works and measure latency."""
+    logger.info("\nValidating quantized model...")
+    try:
+        try:
+            import tflite_runtime.interpreter as tflite
+        except ImportError:
+            # Use tensorflow.lite on desktop
+            import tensorflow as tf
+            tflite = tf.lite
+
+        import numpy as np
+
+        interp = tflite.Interpreter(model_path=tflite_path, num_threads=4)
+        interp.allocate_tensors()
+
+        in_det  = interp.get_input_details()[0]
+        out_det = interp.get_output_details()[0]
+
+        logger.info(f"  Input  dtype : {in_det['dtype'].__name__}")
+        logger.info(f"  Input  shape : {in_det['shape'].tolist()}")
+        logger.info(f"  Output shape : {out_det['shape'].tolist()}")
+        logger.info(f"  Quantization : scale={in_det['quantization'][0]:.6f}, "
+                    f"zp={in_det['quantization'][1]}")
+
+        # Warm up
+        dummy = np.zeros(in_det["shape"], dtype=in_det["dtype"])
+        for _ in range(3):
+            interp.set_tensor(in_det["index"], dummy)
+            interp.invoke()
+
+        # Benchmark
+        times = []
+        for _ in range(10):
+            t0 = time.perf_counter()
+            interp.set_tensor(in_det["index"], dummy)
+            interp.invoke()
+            times.append((time.perf_counter() - t0) * 1000)
+
+        avg_ms = sum(times) / len(times)
+        logger.info(f"  Desktop latency : {avg_ms:.1f} ms/frame  "
+                    f"({1000/avg_ms:.0f} FPS)")
+        logger.info(f"  RPi 5 estimate  : ~{avg_ms * 5:.0f} ms/frame  "
+                    f"(~{1000/(avg_ms*5):.0f} FPS)  [RPi ~5x slower than desktop]")
+        logger.info("  ✓ Model validated OK")
+
+    except Exception as e:
+        logger.warning(f"Validation skipped: {e}")
+
+
+# ════════════════════════════════════════════════════════════════════
 # Main
-# ──────────────────────────────────────────────────────────────────────
+# ════════════════════════════════════════════════════════════════════
 
 def quantize_model(pt_path: str,
                    data_yaml: str = "training/configs/dataset.yaml",
                    output_path: str = "models/quantized/yolov8n_fall_int8.tflite",
-                   imgsz: int = 640,
-                   n_cal: int = 1000):
-    """
-    Full PTQ pipeline. Called from train.py --export or directly.
-    Tries manual pipeline first; falls back to Ultralytics export.
-    """
-    logger.info("=" * 60)
-    logger.info("INT8 Post-Training Quantization")
-    logger.info(f"  Input model : {pt_path}")
-    logger.info(f"  Data YAML   : {data_yaml}")
-    logger.info(f"  Output      : {output_path}")
-    logger.info(f"  Cal samples : {n_cal}")
-    logger.info("=" * 60)
-
-    cal_images = load_calibration_images(data_yaml, n_cal, imgsz)
-
-    try:
-        import tensorflow as tf
-        logger.info("Using manual TF PTQ pipeline...")
-        saved_model = export_to_tf_savedmodel(pt_path, imgsz)
-        rep_dataset = make_representative_dataset(cal_images)
-        convert_to_int8_tflite(saved_model, rep_dataset, output_path, imgsz)
-    except Exception as e:
-        logger.warning(f"Manual pipeline failed ({e}). Trying Ultralytics export...")
-        quantize_via_ultralytics(pt_path, data_yaml, output_path, imgsz)
-
-    validate_tflite(output_path, cal_images, imgsz)
-    logger.info("Quantization complete.")
-    return output_path
+                   imgsz: int = 640) -> str:
+    """Entry point called from train.py --export or directly."""
+    return export_ultralytics(pt_path, data_yaml, output_path, imgsz)
 
 
-if __name__ == "__main__":
+def main():
     args = parse_args()
-    quantize_model(
+
+    if not Path(args.model).exists():
+        logger.error(f"Model not found: {args.model}")
+        logger.error("Run training first: python training/scripts/train_yolov8.py ...")
+        return
+
+    output = quantize_model(
         pt_path=args.model,
         data_yaml=args.data,
         output_path=args.out,
         imgsz=args.imgsz,
-        n_cal=args.cal_size,
     )
+
+    validate(output, imgsz=args.imgsz)
+
+    size_fp32 = os.path.getsize(args.model) / 1024 / 1024
+    size_int8 = os.path.getsize(output) / 1024 / 1024
+    reduction = (1 - size_int8 / size_fp32) * 100
+
+    logger.info("\n" + "=" * 60)
+    logger.info("QUANTIZATION SUMMARY")
+    logger.info("=" * 60)
+    logger.info(f"  FP32 model : {args.model}  ({size_fp32:.2f} MB)")
+    logger.info(f"  INT8 model : {output}  ({size_int8:.2f} MB)")
+    logger.info(f"  Size reduction : {reduction:.0f}%")
+    logger.info(f"\nNext step — transfer to Raspberry Pi:")
+    logger.info(f"  scp {output} pi@raspberrypi.local:~/elder_watch/models/quantized/")
+
+
+if __name__ == "__main__":
+    main()

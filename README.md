@@ -188,120 +188,79 @@ python -c "import torch; print(torch.cuda.is_available())"
 
 ### Phase 1: Dataset Preparation
 
-All datasets below are **free and open-source**. You do not need to pay for any of them.
+All datasets are **free and open-source**. Use the one-shot downloader script, then run prepare_datasets.py.
 
-#### Overview of available datasets
+#### Available datasets
 
-| # | Dataset | Images / Frames | Format | Download | Notes |
-|---|---------|----------------|--------|----------|-------|
-| 1 | **Roboflow Fall Detection** | 4,497 annotated | YOLO (ready) | Roboflow API / web ZIP | **Easiest — no video processing needed** |
-| 2 | **URFD** (Univ. Rzeszow) | ~2,600 PNG frames | Raw frames | Direct ZIP, no login | 30 fall + 40 ADL sequences |
-| 3 | **Le2i FDD** | ~8,000 frames from 221 videos | Video + annotation files | Kaggle (free account) | Home + coffee room scenes |
-| 4 | **MCFD** (Univ. Montreal) | ~4,000 frames | Raw PNG frames | Direct download | 8 fall scenarios, 3 cameras |
-
-Use **at least one**. Combining all four gives the best generalisation.
+| # | Dataset | Frames | Login needed | Notes |
+|---|---------|--------|-------------|-------|
+| 1 | **Roboflow Fall Detection** | 4,497 pre-annotated | Free Roboflow account | Easiest — already YOLO format |
+| 2 | **URFD** (Univ. Rzeszow) | ~2,600 PNG frames | ❌ None | 30 individual fall ZIPs + 40 ADL ZIPs |
+| 3 | **Le2i FDD** | ~8,000 from 221 videos | Free Kaggle account | Per-frame fall annotations |
 
 ---
 
-#### Option A — Roboflow Fall Detection (Recommended for fastest start)
+#### Step 1a — Run the downloader
 
-> Pre-annotated, already split 70/20/10, YOLO format. No video extraction needed.
+```bash
+chmod +x training/scripts/download_datasets.sh
+./training/scripts/download_datasets.sh
+```
 
-**Method 1 — Auto-download via Python (needs free API key):**
+This is interactive — it walks you through each dataset. Or download individually:
+
+**URFD only (no login, no Roboflow account — fastest start):**
+```bash
+chmod +x training/scripts/download_urfd.sh
+./training/scripts/download_urfd.sh datasets/raw/urfd
+```
+> The URFD site hosts 70 individual ZIPs (`fall-01-cam0-rgb.zip` … `adl-40-cam0-rgb.zip`).
+> The downloader fetches and extracts each one automatically. Total ~1.5 GB.
+
+**Roboflow (4,497 pre-annotated images — best quality labels):**
 ```bash
 pip install roboflow
-# Get your free API key at: https://app.roboflow.com (sign up → Settings → API)
+# Free API key at: https://app.roboflow.com → Settings → API
 python training/scripts/prepare_datasets.py \
-    --download-roboflow \
-    --api-key YOUR_ROBOFLOW_API_KEY \
-    --out datasets/processed
+    --download-roboflow --api-key YOUR_KEY --out datasets/processed
 ```
+Or manual: go to `https://universe.roboflow.com/roboflow-universe-projects/fall-detection-ca3o8/dataset/4` → Download → YOLOv8 → ZIP → extract to `datasets/raw/roboflow_fall/`
 
-**Method 2 — Manual ZIP download (no login required for public datasets):**
-```
-1. Go to: https://universe.roboflow.com/roboflow-universe-projects/fall-detection-ca3o8/dataset/4
-2. Click "Download Dataset" → Format: YOLOv8 → Download ZIP
-3. Extract to: datasets/raw/roboflow_fall/
-```
+**Le2i via Kaggle (richest annotation — per-frame fall labels):**
 ```bash
-python training/scripts/prepare_datasets.py \
-    --roboflow datasets/raw/roboflow_fall \
-    --out datasets/processed
-```
-
----
-
-#### Option B — URFD (No login, direct download)
-
-```bash
-mkdir -p datasets/raw/urfd
-cd datasets/raw/urfd
-
-# Download fall sequences (cam0, RGB)
-wget https://fenix.ur.edu.pl/~mkepski/ds/data/urfall-cam0-falls.zip
-unzip urfall-cam0-falls.zip
-
-# Download ADL (normal activity) sequences
-wget https://fenix.ur.edu.pl/~mkepski/ds/data/urfall-cam0-adls.zip
-unzip urfall-cam0-adls.zip
-
-cd ../../..
-python training/scripts/prepare_datasets.py \
-    --urfd datasets/raw/urfd \
-    --out  datasets/processed
-```
-
----
-
-#### Option C — Le2i FDD via Kaggle (free account needed)
-
-```bash
-# Install Kaggle CLI
 pip install kaggle
-# Place kaggle.json from https://www.kaggle.com/settings → API → Create Token
-# into ~/.kaggle/kaggle.json
-
-mkdir -p datasets/raw/le2i
+# Get kaggle.json from: https://www.kaggle.com/settings → API → Create Token
+mkdir -p ~/.kaggle && cp ~/Downloads/kaggle.json ~/.kaggle/
+chmod 600 ~/.kaggle/kaggle.json
 kaggle datasets download tuyenldvn/falldataset-imvia -p datasets/raw/le2i --unzip
-
-python training/scripts/prepare_datasets.py \
-    --le2i datasets/raw/le2i \
-    --out  datasets/processed
 ```
 
 ---
 
-#### Option D — Combine all sources (Best accuracy)
+#### Step 1b — Prepare datasets for YOLO training
 
 ```bash
+# Using all downloaded sources (recommended):
 python training/scripts/prepare_datasets.py \
-    --roboflow  datasets/raw/roboflow_fall \
     --urfd      datasets/raw/urfd \
+    --roboflow  datasets/raw/roboflow_fall \
     --le2i      datasets/raw/le2i \
     --out       datasets/processed \
     --split     0.70 0.15 0.15
-```
 
-The script automatically:
-- Extracts frames at 5 FPS from videos
-- Applies per-frame FALL/PERSON labels from annotation files (Le2i)
-- Augments fall frames (hflip + brightness jitter) if class-imbalanced
-- Writes `training/configs/dataset.yaml`
-
-#### 1b. Verify dataset
-```bash
-ls datasets/processed/images/train/ | wc -l   # should show image count
-ls datasets/processed/labels/train/ | wc -l   # should match above
-cat training/configs/dataset.yaml
-```
-
-#### Minimum viable dataset for testing (no download)
-```bash
-# Quick sanity test with URFD only + frame limit
+# URFD only (minimum viable):
 python training/scripts/prepare_datasets.py \
     --urfd datasets/raw/urfd \
-    --out  datasets/processed \
-    --max-frames 15
+    --out  datasets/processed
+```
+
+The script: extracts frames at 5 FPS, labels frames individually using Le2i annotation files, augments fall frames if class-imbalanced, writes `training/configs/dataset.yaml`.
+
+#### Step 1c — Verify
+```bash
+ls datasets/processed/images/train/ | wc -l   # image count
+ls datasets/processed/labels/train/ | wc -l   # should match
+cat training/configs/dataset.yaml
 ```
 
 ---

@@ -1,0 +1,300 @@
+# HOW TO RUN — Elder Watch
+# Datasets: Roboflow Fall Detection v4 + Le2i falldataset-imvia
+# Machine: Ubuntu desktop with GPU  →  then deploy to Raspberry Pi 5
+
+=======================================================================
+STEP 0 — Confirm your downloaded files
+=======================================================================
+
+You should have two ZIP files (or extracted folders):
+  A. Roboflow:  fall-detection-ca3o8.v4...YOLOv8.zip   (or similar name)
+  B. Le2i:      falldataset-imvia.zip
+
+Extract both into the project:
+
+  cd ~/Downloads/.../elder_watch
+
+  mkdir -p datasets/raw/roboflow_fall
+  mkdir -p datasets/raw/le2i
+
+  # Unzip Roboflow (adjust filename to match what you downloaded)
+  unzip ~/Downloads/fall-detection-ca3o8.v4*.zip -d datasets/raw/roboflow_fall
+
+  # Unzip Le2i
+  unzip ~/Downloads/falldataset-imvia.zip -d datasets/raw/le2i
+
+Verify the Roboflow structure looks like:
+  datasets/raw/roboflow_fall/
+    train/
+      images/  ← lots of .jpg files
+      labels/  ← lots of .txt files
+    valid/
+      images/
+      labels/
+    test/
+      images/
+      labels/
+    data.yaml
+
+Verify the Le2i structure looks like:
+  datasets/raw/le2i/
+    Fall dataset/          ← or directly:
+      Coffee_room/
+        video_01.avi
+        ...
+        Annotation_files/
+          video_01.txt
+          ...
+      Home/
+        video_01.avi
+        ...
+        Annotation_files/
+      Office/
+      Lecture_Room/
+
+If you see a different structure, run:
+  find datasets/raw/le2i -maxdepth 4 -name "*.avi" | head -5
+  find datasets/raw/le2i -maxdepth 4 -name "*.txt" | head -5
+  # Post the output if something looks wrong.
+
+
+=======================================================================
+STEP 1 — Install dependencies (desktop/GPU machine)
+=======================================================================
+
+  source venv/bin/activate          # activate your virtualenv
+
+  pip install ultralytics opencv-python PyYAML mediapipe
+
+
+=======================================================================
+STEP 2 — Prepare datasets
+=======================================================================
+
+  python training/scripts/prepare_datasets.py \
+      --roboflow datasets/raw/roboflow_fall \
+      --le2i     datasets/raw/le2i \
+      --out      datasets/processed
+
+Expected output:
+  [INFO] Roboflow root detected: datasets/raw/roboflow_fall
+  [INFO]   Roboflow train  → train: 3142 images
+  [INFO]   Roboflow valid  → val  :  299 images
+  [INFO]   Roboflow test   → test :  150 images
+  [INFO] Le2i root detected: ...
+  [INFO]   Le2i scene 'Coffee_room': 70 videos, annotations=yes
+  [INFO]   Le2i scene 'Home': 60 videos, annotations=yes
+  [INFO] Le2i total: ~6500 frames | fall=~2100 | person=~4400
+  [INFO]   train:  ~6670 samples written
+  [INFO]   val  :  ~1430 samples written
+  [INFO]   test :  ~1430 samples written
+  [INFO]   TOTAL:  ~9530 images (combined with Roboflow)
+
+Also creates:  training/configs/dataset.yaml   ← used by training
+
+Troubleshooting:
+  If "Le2i: could not find Coffee_room/ or Home/" → check your zip extracted
+  into an extra wrapper folder. Try:
+    --le2i "datasets/raw/le2i/Fall dataset"
+
+
+=======================================================================
+STEP 3 — Fine-tune YOLOv8n
+=======================================================================
+
+  python training/scripts/train_yolov8.py \
+      --data   training/configs/dataset.yaml \
+      --device 0 \
+      --epochs 50
+
+  # If no GPU (CPU only — slow but works):
+  python training/scripts/train_yolov8.py \
+      --data   training/configs/dataset.yaml \
+      --device cpu \
+      --epochs 20
+
+Training output goes to:  runs/detect/elder_watch/
+Best model saved to:      models/finetuned/yolov8n_fall.pt
+
+Expected training time:
+  GPU (RTX 3060 / 4060):  ~30–60 min for 50 epochs
+  GPU (RTX 3080 / 4080):  ~15–25 min
+  CPU only:               ~8–12 hours (use --epochs 20 for testing)
+
+Watch metrics in real time:
+  tensorboard --logdir runs/detect     # then open http://localhost:6006
+
+Target metrics at epoch 50:
+  mAP50 >= 0.90
+  Precision >= 0.88
+  Recall >= 0.88
+
+
+=======================================================================
+STEP 4 — Quantize for Raspberry Pi 5 (PTQ INT8)
+=======================================================================
+
+  pip install tensorflow   # needed only for quantization, not on RPi
+
+  python training/scripts/quantize.py \
+      --model models/finetuned/yolov8n_fall.pt \
+      --data  training/configs/dataset.yaml \
+      --out   models/quantized/yolov8n_fall_int8.tflite
+
+Expected output:
+  [INFO] INT8 TFLite model saved: models/quantized/yolov8n_fall_int8.tflite (1.6 MB)
+  [INFO] Avg latency = 21.4ms | FPS = 46.7  ← on desktop (much faster than RPi)
+
+File sizes to expect:
+  models/finetuned/yolov8n_fall.pt      → ~6 MB  (FP32)
+  models/quantized/yolov8n_fall_int8.tflite → ~1.6 MB  (INT8)
+
+
+=======================================================================
+STEP 5 — Evaluate (optional but recommended)
+=======================================================================
+
+  python training/scripts/evaluate.py \
+      --pt     models/finetuned/yolov8n_fall.pt \
+      --tflite models/quantized/yolov8n_fall_int8.tflite \
+      --data   training/configs/dataset.yaml
+
+Results saved to: logs/eval_results.json
+
+
+=======================================================================
+STEP 6 — Test on your desktop camera (quick sanity check)
+=======================================================================
+
+  pip install mediapipe twilio PyYAML
+
+  # With webcam + display window
+  python main.py --source 0
+
+  # With a test video file
+  python main.py --source path/to/test_video.mp4
+
+  # Press 'q' to quit.
+  # You should see:
+  #   - Bounding boxes drawn around people
+  #   - State banner at bottom: NORMAL / NEAR_FALL / FALL_DETECTED
+  #   - FPS counter top-right
+
+
+=======================================================================
+STEP 7 — Deploy to Raspberry Pi 5
+=======================================================================
+
+7a. Transfer files to RPi (run on desktop):
+
+  # Sync project (exclude large training data)
+  rsync -avz \
+      --exclude='datasets/' \
+      --exclude='runs/' \
+      --exclude='venv/' \
+      --exclude='__pycache__/' \
+      ./ pi@raspberrypi.local:~/elder_watch/
+
+  # Transfer the quantized model
+  scp models/quantized/yolov8n_fall_int8.tflite \
+      pi@raspberrypi.local:~/elder_watch/models/quantized/
+
+7b. Run setup script on RPi (SSH in first):
+
+  ssh pi@raspberrypi.local
+  cd ~/elder_watch
+  chmod +x deployment/rpi_setup/setup_rpi.sh
+  ./deployment/rpi_setup/setup_rpi.sh
+  sudo reboot
+
+7c. After reboot, test manually:
+
+  ssh pi@raspberrypi.local
+  source ~/elder_watch_venv/bin/activate
+  cd ~/elder_watch
+
+  # Run integration tests first
+  python deployment/tests/test_integration.py
+
+  # Run headless (no display on RPi)
+  python main.py --headless
+
+7d. Set up alerts (edit configs/config.yaml):
+
+  nano configs/config.yaml
+  # Set under 'alert':
+  #   telegram_enabled: true
+  #   telegram_bot_token: "YOUR_BOT_TOKEN"
+  #   telegram_chat_id: "YOUR_CHAT_ID"
+  # Getting a Telegram bot:
+  #   1. Open Telegram, search @BotFather
+  #   2. Send /newbot, follow prompts → get token
+  #   3. Search @userinfobot → send any message → get your chat_id
+
+7e. Enable auto-start on boot:
+
+  sudo cp deployment/systemd/elder-watch.service /etc/systemd/system/
+  sudo systemctl daemon-reload
+  sudo systemctl enable elder-watch
+  sudo systemctl start elder-watch
+
+  # Check it's running:
+  sudo systemctl status elder-watch
+  sudo journalctl -u elder-watch -f
+
+
+=======================================================================
+QUICK REFERENCE — Most common commands
+=======================================================================
+
+  # Prepare data
+  python training/scripts/prepare_datasets.py \
+      --roboflow datasets/raw/roboflow_fall \
+      --le2i datasets/raw/le2i --out datasets/processed
+
+  # Train
+  python training/scripts/train_yolov8.py --data training/configs/dataset.yaml
+
+  # Quantize
+  python training/scripts/quantize.py \
+      --model models/finetuned/yolov8n_fall.pt \
+      --data training/configs/dataset.yaml
+
+  # Run on desktop
+  python main.py --source 0
+
+  # Run on RPi (headless)
+  python main.py --headless
+
+
+=======================================================================
+TROUBLESHOOTING
+=======================================================================
+
+Problem: "No module named 'ultralytics'"
+Fix:     pip install ultralytics
+
+Problem: "No module named 'mediapipe'"
+Fix:     pip install mediapipe
+
+Problem: "Le2i: could not find Coffee_room or Home"
+Fix:     Check the folder name after unzip. Try:
+         find datasets/raw/le2i -type d | head -20
+         Then pass the parent of Coffee_room/ to --le2i
+
+Problem: CUDA out of memory during training
+Fix:     Reduce batch size in training/configs/yolov8_fall.yaml:
+         batch_size: 8   (or even 4)
+
+Problem: mAP is low (<0.80) after training
+Fix:     Check class balance in dataset.yaml (train count).
+         If very few fall images, add --no-augment=false (default).
+         Try training for more epochs: --epochs 100
+
+Problem: RPi camera not detected
+Fix:     Run: v4l2-ctl --list-devices
+         If empty: sudo modprobe bcm2835-v4l2
+
+Problem: Alert not received on Telegram
+Fix:     Test token: curl https://api.telegram.org/botTOKEN/getMe
+         Check cooldown: alert.alert_cooldown_seconds in config.yaml
