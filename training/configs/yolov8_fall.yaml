@@ -1,0 +1,78 @@
+# YOLOv8 Fall Detection - Training Configuration
+# University of Ruhuna EE7204/EC7205
+
+# ── Model ──────────────────────────────────────────────────────────────
+model:
+  architecture: yolov8n          # Nano: 3.2M params, best for RPi
+  pretrained: yolov8n.pt         # COCO pre-trained weights (auto-download)
+  # Alternative: yolov8n-pose.pt for pose-integrated detection
+
+# ── Training Hyperparameters ───────────────────────────────────────────
+training:
+  epochs: 50
+  batch_size: 16
+  image_size: 640
+  learning_rate: 0.001
+  lrf: 0.01                      # Final LR ratio
+  weight_decay: 0.0005
+  warmup_epochs: 3
+  patience: 15                   # Early stopping
+
+  optimizer: AdamW
+  cos_lr: true                   # Cosine LR schedule
+
+  # Augmentation
+  hsv_h: 0.015
+  hsv_s: 0.7
+  hsv_v: 0.4
+  degrees: 15.0                  # ±15° rotation
+  translate: 0.1
+  scale: 0.5
+  flipud: 0.0                    # NO vertical flip (ceiling cam)
+  fliplr: 0.5
+  mosaic: 1.0
+  mixup: 0.1
+  close_mosaic: 10               # Disable mosaic last 10 epochs
+
+# ── Dataset ────────────────────────────────────────────────────────────
+# All datasets below are FREE and open-source.
+# Run prepare_datasets.py first; it creates training/configs/dataset.yaml
+dataset:
+  yaml_path: training/configs/dataset.yaml   # auto-generated
+  train_split: 0.70
+  val_split:   0.15
+  test_split:  0.15
+  # Sources (use any combination):
+  #   Roboflow Fall Detection : ~4,497 images (easiest — pre-annotated YOLO)
+  #     https://universe.roboflow.com/roboflow-universe-projects/fall-detection-ca3o8
+  #   URFD                   : ~2,600 frames, direct ZIP download, no login
+  #     https://fenix.ur.edu.pl/~mkepski/ds/uf.html
+  #   Le2i FDD               : ~8,000 frames, Kaggle free account
+  #     https://www.kaggle.com/datasets/tuyenldvn/falldataset-imvia
+  #   MCFD                   : ~4,000 frames, direct download
+  #     http://www.iro.umontreal.ca/~labimage/Dataset/
+
+# ── Hardware ───────────────────────────────────────────────────────────
+hardware:
+  device: "0"                    # GPU index; use "cpu" if no GPU
+  workers: 8
+
+# ── Export ─────────────────────────────────────────────────────────────
+export:
+  format: tflite
+  imgsz: 640
+  int8: true
+  simplify: true
+
+# ── Expected Performance (YOLOv8n on fall datasets) ────────────────────
+expected:
+  mAP50:         ">= 0.90"
+  mAP50_95:      ">= 0.75"
+  precision:     ">= 0.92"
+  recall:        ">= 0.88"
+  f1:            ">= 0.90"
+  # After INT8 quantization on RPi 5:
+  fps_rpi5:      "15-25 FPS"
+  latency_rpi5:  "20-30 ms/frame"
+  model_size_fp32: "~6.2 MB"
+  model_size_int8: "~1.6 MB"

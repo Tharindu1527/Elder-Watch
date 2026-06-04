@@ -1,0 +1,44 @@
+[Unit]
+Description=Elder Watch - Computer Vision Fall Detection System
+Documentation=https://github.com/yourrepo/elder-watch
+After=network.target graphical.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+Group=video
+WorkingDirectory=/home/pi/elder_watch
+
+# ── Runtime ──────────────────────────────────────────────────────────
+ExecStartPre=/bin/sleep 3
+ExecStart=/home/pi/elder_watch_venv/bin/python main.py \
+    --headless \
+    --config configs/config.yaml
+
+# ── Restart policy ───────────────────────────────────────────────────
+Restart=always
+RestartSec=5
+StartLimitInterval=60
+StartLimitBurst=5
+
+# ── Environment ──────────────────────────────────────────────────────
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=DISPLAY=:0
+
+# ── Resource control (RPi 5, 4GB) ────────────────────────────────────
+CPUQuota=95%
+MemoryMax=3G
+MemorySwapMax=512M
+Nice=-5
+IOSchedulingClass=1
+IOSchedulingPriority=4
+
+# ── Logging ──────────────────────────────────────────────────────────
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=elder-watch
+
+[Install]
+WantedBy=multi-user.target

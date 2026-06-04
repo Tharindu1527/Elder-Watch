@@ -1,0 +1,31 @@
+# ============================================================
+# requirements_rpi.txt  — Raspberry Pi 5 Deployment
+# ============================================================
+# Install: pip install -r requirements_rpi.txt
+#
+# NOTE: Do NOT install full tensorflow or torch on RPi.
+# Use tflite-runtime instead (much smaller footprint).
+
+# Core
+numpy>=1.24.0
+PyYAML>=6.0
+Pillow>=10.0.0
+
+# OpenCV (headless for RPi without display)
+opencv-python-headless>=4.8.0
+
+# TFLite Runtime (lightweight, no full TF)
+# On RPi ARM64: this is usually auto-installed via:
+#   pip install tflite-runtime
+tflite-runtime>=2.14.0
+
+# MediaPipe (ARM64 build)
+mediapipe>=0.10.0
+
+# Alerts
+twilio>=8.0.0
+requests>=2.31.0
+
+# System utilities
+psutil>=5.9.0
+smbus2>=0.4.3

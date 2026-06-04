@@ -1,0 +1,163 @@
+# Elder Watch System Configuration
+# University of Ruhuna - EE7204/EC7205
+
+system:
+  name: "Elder Watch"
+  version: "1.0.0"
+  device: "raspberry_pi_5"
+  log_level: "INFO"
+  log_dir: "logs/"
+
+camera:
+  device_id: 0                 # /dev/video0 on RPi
+  width: 640
+  height: 480
+  fps: 30
+  flip_vertical: false         # Set true if camera is upside-down
+  # For ceiling-mounted camera overhead view
+  mounted: "ceiling"          # options: ceiling, wall, desk
+
+yolo:
+  model_path: "models/quantized/yolov8n_fall_int8.tflite"
+  fallback_model: "models/finetuned/yolov8n_fall.pt"
+  input_size: 640
+  confidence_threshold: 0.50  # For person detection (Stage 1)
+  fall_confidence_threshold: 0.70  # For fall class (Stage 2)
+  nms_threshold: 0.45
+  classes:
+    - person
+    - fall
+  use_tflite: true             # Set false on desktop for .pt
+
+mediapipe:
+  min_detection_confidence: 0.5
+  min_tracking_confidence: 0.5
+  model_complexity: 0          # 0=Lite, 1=Full, 2=Heavy  (use 0 on RPi)
+  enable_segmentation: false
+  smooth_landmarks: true
+
+classification:
+  # Pose-based thresholds
+  body_aspect_ratio_threshold: 2.0    # height/width > 2 = standing
+  center_of_mass_threshold: 0.45     # normalized y < 0.45 = low COM
+  torso_angle_threshold: 30          # degrees from vertical = horizontal
+  hip_knee_angle_threshold: 120      # degrees - bent posture
+  velocity_threshold: 0.08          # keypoint displacement per frame
+  inactivity_threshold_seconds: 5   # prolonged lying still
+  
+  # Temporal smoothing - require N consecutive frames
+  confirmation_frames: 3
+  near_fall_frames: 2
+
+  # State machine
+  states:
+    - NORMAL
+    - NEAR_FALL
+    - FALL_DETECTED
+    - INACTIVE_ALERT
+
+alert:
+  enabled: true
+  # Twilio SMS
+  twilio_enabled: false
+  twilio_account_sid: "YOUR_TWILIO_SID"
+  twilio_auth_token: "YOUR_TWILIO_TOKEN"
+  twilio_from: "+1XXXXXXXXXX"
+  twilio_to: "+1XXXXXXXXXX"
+  
+  # Email SMTP
+  email_enabled: false
+  smtp_host: "smtp.gmail.com"
+  smtp_port: 587
+  smtp_user: "your_email@gmail.com"
+  smtp_password: "your_app_password"
+  recipient_email: "guardian@example.com"
+  
+  # Telegram Bot
+  telegram_enabled: false
+  telegram_bot_token: "YOUR_BOT_TOKEN"
+  telegram_chat_id: "YOUR_CHAT_ID"
+  
+  # Cooldown to prevent alert flooding
+  alert_cooldown_seconds: 30
+  capture_snapshot: true
+  snapshot_resolution: [320, 240]
+
+preprocessing:
+  resize_width: 640
+  resize_height: 640
+  normalize: true
+  clahe_enabled: true           # Adaptive histogram equalization
+  clahe_clip_limit: 2.0
+  clahe_grid_size: [8, 8]
+  blur_kernel: 3               # Gaussian blur kernel size
+  
+  # Optical flow (for motion analysis)
+  optical_flow_enabled: true
+  flow_method: "farneback"     # farneback or lucas_kanade
+  
+  # Data augmentation (training only)
+  augmentation:
+    horizontal_flip: true
+    vertical_flip: false
+    rotate_range: 15
+    brightness_range: [0.7, 1.3]
+    contrast_range: [0.8, 1.2]
+
+training:
+  # YOLOv8 fine-tuning settings
+  epochs: 50
+  batch_size: 16
+  image_size: 640
+  learning_rate: 0.001
+  weight_decay: 0.0005
+  warmup_epochs: 3
+  pretrained_weights: "yolov8n.pt"
+  
+  # Dataset split
+  train_split: 0.70
+  val_split: 0.15
+  test_split: 0.15
+  
+  # Free open-source datasets (see prepare_datasets.py for download instructions)
+  datasets:
+    - name: "Roboflow Fall Detection"
+      url:  "https://universe.roboflow.com/roboflow-universe-projects/fall-detection-ca3o8"
+      path: "datasets/raw/roboflow_fall"
+      format: "yolo_preannoted"    # No video extraction needed
+      images: 4497
+      license: "CC BY 4.0"
+    - name: "URFD (UR Fall Detection Dataset)"
+      url:  "https://fenix.ur.edu.pl/~mkepski/ds/uf.html"
+      path: "datasets/raw/urfd"
+      format: "png_frames"         # Raw PNG frame sequences
+      images: ~2600
+      license: "Free for research"
+    - name: "Le2i FDD"
+      url:  "https://www.kaggle.com/datasets/tuyenldvn/falldataset-imvia"
+      path: "datasets/raw/le2i"
+      format: "video_with_annotations"
+      images: ~8000                # After frame extraction at 5 FPS
+      license: "Free for research (Kaggle)"
+    - name: "MCFD (Multiple Cameras Fall Dataset)"
+      url:  "http://www.iro.umontreal.ca/~labimage/Dataset/"
+      path: "datasets/raw/mcfd"
+      format: "png_frames"
+      images: ~4000
+      license: "Free for research"
+
+quantization:
+  method: "PTQ"                # PTQ or QAT
+  dtype: "int8"
+  calibration_samples: 1000
+  calibration_batch_size: 32
+  # Expected results: ~25MB -> 6-7MB, 50ms -> 20ms per frame
+
+display:
+  show_preview: true           # Set false for headless RPi
+  draw_skeleton: true
+  draw_bounding_box: true
+  draw_optical_flow: false
+  show_fps: true
+  show_confidence: true
+  window_title: "Elder Watch - Fall Detection"
