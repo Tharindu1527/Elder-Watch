@@ -1,0 +1,26 @@
+[16:22:11] INFO     root                 Logging initialized → logs/elder_watch_20260610_162211.log
+[16:22:11] INFO     ElderWatch           Initializing Elder Watch System...
+[16:22:11] INFO     src.preprocessing.frame_processor FrameProcessor: resize=(640,640), CLAHE=True, blur=3
+[16:22:12] INFO     src.detection.yolo_detector Loading PyTorch YOLO model: models/finetuned/yolov8n_fall.pt
+[16:22:12] INFO     src.detection.yolo_detector PyTorch model loaded.
+[16:22:12] INFO     ElderWatch           YOLO warmup complete.
+[16:22:12] INFO     src.pose.mediapipe_pose MediaPipe disabled - YOLO-only mode.
+[16:22:12] INFO     src.preprocessing.optical_flow OpticalFlowAnalyzer: enabled=True, method=farneback
+[16:22:12] INFO     src.classification.fall_classifier FallClassifier initialized.
+[16:22:12] INFO     src.alerts.alert_manager AlertManager initialized. Channels: SMS=False, Email=False, Telegram=False
+[16:22:12] INFO     ElderWatch           All components initialized successfully.
+[16:22:12] INFO     ElderWatch           Camera opened: datasets/raw/le2i/test_converted.mp4 @ 320x240
+[16:22:12] INFO     ElderWatch           Starting Elder Watch monitoring loop...
+[16:22:12] INFO     ElderWatch           Press Ctrl+C or 'q' to stop.
+[16:22:20] WARNING  ElderWatch           Frame read failed – attempting reconnect...
+[16:22:20] INFO     ElderWatch           Camera opened: datasets/raw/le2i/test_converted.mp4 @ 320x240
+[16:22:27] INFO     ElderWatch           [Frame 300] FPS=24.9 | State=NORMAL
+[16:22:28] WARNING  ElderWatch           Frame read failed – attempting reconnect...
+[16:22:28] INFO     ElderWatch           Camera opened: datasets/raw/le2i/test_converted.mp4 @ 320x240
+[16:22:36] WARNING  ElderWatch           Frame read failed – attempting reconnect...
+[16:22:36] INFO     ElderWatch           Camera opened: datasets/raw/le2i/test_converted.mp4 @ 320x240
+[16:22:42] INFO     ElderWatch           [Frame 600] FPS=20.5 | State=NORMAL
+[16:22:44] WARNING  ElderWatch           Frame read failed – attempting reconnect...
+[16:22:44] INFO     ElderWatch           Camera opened: datasets/raw/le2i/test_converted.mp4 @ 320x240
+[16:22:48] INFO     ElderWatch           Keyboard interrupt received.
+[16:22:48] INFO     ElderWatch           Elder Watch stopped.

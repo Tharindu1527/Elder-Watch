@@ -22,17 +22,18 @@ yolo:
   fallback_model: "models/finetuned/yolov8n_fall.pt"
   use_tflite: false
   input_size: 640
-  confidence_threshold: 0.50  # For person detection (Stage 1)
-  fall_confidence_threshold: 0.70  # For fall class (Stage 2)
+  confidence_threshold: 0.25  # For person detection (Stage 1)
+  fall_confidence_threshold: 0.35  # For fall class (Stage 2)
   nms_threshold: 0.45
   classes:
     - person
     - fall
 
 mediapipe:
+  enabled: false
   min_detection_confidence: 0.5
   min_tracking_confidence: 0.5
-  model_complexity: 0          # 0=Lite, 1=Full, 2=Heavy  (use 0 on RPi)
+  model_complexity: 0
   enable_segmentation: false
   smooth_landmarks: true
 

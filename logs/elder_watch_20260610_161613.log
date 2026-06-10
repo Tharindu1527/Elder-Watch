@@ -1,0 +1,61 @@
+[16:16:13] INFO     root                 Logging initialized → logs/elder_watch_20260610_161613.log
+[16:16:13] INFO     ElderWatch           Initializing Elder Watch System...
+[16:16:13] INFO     src.preprocessing.frame_processor FrameProcessor: resize=(640,640), CLAHE=True, blur=3
+[16:16:13] DEBUG    matplotlib           matplotlib data path: /home/muscle_hyper/Downloads/files (3)/elder_watch_v2_free_datasets/elder_watch/venv/lib/python3.12/site-packages/matplotlib/mpl-data
+[16:16:13] DEBUG    matplotlib           CONFIGDIR=/home/muscle_hyper/.config/matplotlib
+[16:16:13] DEBUG    matplotlib           interactive is False
+[16:16:13] DEBUG    matplotlib           platform is linux
+[16:16:13] DEBUG    matplotlib           CACHEDIR=/home/muscle_hyper/.cache/matplotlib
+[16:16:13] DEBUG    matplotlib.font_manager Using fontManager instance from /home/muscle_hyper/.cache/matplotlib/fontlist-v390.json
+[16:16:14] INFO     src.detection.yolo_detector Loading PyTorch YOLO model: models/finetuned/yolov8n_fall.pt
+[16:16:14] INFO     src.detection.yolo_detector PyTorch model loaded.
+[16:16:14] INFO     ElderWatch           YOLO warmup complete.
+[16:16:14] INFO     src.pose.mediapipe_pose MediaPipe disabled - YOLO-only mode.
+[16:16:14] INFO     src.preprocessing.optical_flow OpticalFlowAnalyzer: enabled=True, method=farneback
+[16:16:14] INFO     src.classification.fall_classifier FallClassifier initialized.
+[16:16:14] DEBUG    src.classification.fall_classifier Thresholds: aspect<2.0 | com_y<0.45 | torso>30° | confirm=3fr
+[16:16:14] INFO     src.alerts.alert_manager AlertManager initialized. Channels: SMS=False, Email=False, Telegram=False
+[16:16:14] INFO     ElderWatch           All components initialized successfully.
+[16:16:14] INFO     ElderWatch           Camera opened: datasets/raw/le2i/test_converted.mp4 @ 320x240
+[16:16:14] INFO     ElderWatch           Starting Elder Watch monitoring loop...
+[16:16:14] INFO     ElderWatch           Press Ctrl+C or 'q' to stop.
+[16:16:21] WARNING  ElderWatch           Frame read failed – attempting reconnect...
+[16:16:22] INFO     ElderWatch           Camera opened: datasets/raw/le2i/test_converted.mp4 @ 320x240
+[16:16:28] INFO     ElderWatch           [Frame 300] FPS=20.5 | State=NORMAL
+[16:16:29] WARNING  ElderWatch           Frame read failed – attempting reconnect...
+[16:16:29] INFO     ElderWatch           Camera opened: datasets/raw/le2i/test_converted.mp4 @ 320x240
+[16:16:37] WARNING  ElderWatch           Frame read failed – attempting reconnect...
+[16:16:38] INFO     ElderWatch           Camera opened: datasets/raw/le2i/test_converted.mp4 @ 320x240
+[16:16:44] INFO     ElderWatch           [Frame 600] FPS=20.4 | State=NORMAL
+[16:16:46] WARNING  ElderWatch           Frame read failed – attempting reconnect...
+[16:16:46] INFO     ElderWatch           Camera opened: datasets/raw/le2i/test_converted.mp4 @ 320x240
+[16:16:53] WARNING  ElderWatch           Frame read failed – attempting reconnect...
+[16:16:54] INFO     ElderWatch           Camera opened: datasets/raw/le2i/test_converted.mp4 @ 320x240
+[16:16:59] INFO     ElderWatch           [Frame 900] FPS=22.3 | State=NORMAL
+[16:17:01] WARNING  ElderWatch           Frame read failed – attempting reconnect...
+[16:17:02] INFO     ElderWatch           Camera opened: datasets/raw/le2i/test_converted.mp4 @ 320x240
+[16:17:09] WARNING  ElderWatch           Frame read failed – attempting reconnect...
+[16:17:10] INFO     ElderWatch           Camera opened: datasets/raw/le2i/test_converted.mp4 @ 320x240
+[16:17:14] INFO     ElderWatch           [Frame 1200] FPS=22.2 | State=NORMAL
+[16:17:17] WARNING  ElderWatch           Frame read failed – attempting reconnect...
+[16:17:17] INFO     ElderWatch           Camera opened: datasets/raw/le2i/test_converted.mp4 @ 320x240
+[16:17:25] WARNING  ElderWatch           Frame read failed – attempting reconnect...
+[16:17:25] INFO     ElderWatch           Camera opened: datasets/raw/le2i/test_converted.mp4 @ 320x240
+[16:17:29] INFO     ElderWatch           [Frame 1500] FPS=22.9 | State=NORMAL
+[16:17:32] WARNING  ElderWatch           Frame read failed – attempting reconnect...
+[16:17:33] INFO     ElderWatch           Camera opened: datasets/raw/le2i/test_converted.mp4 @ 320x240
+[16:17:40] WARNING  ElderWatch           Frame read failed – attempting reconnect...
+[16:17:40] INFO     ElderWatch           Camera opened: datasets/raw/le2i/test_converted.mp4 @ 320x240
+[16:17:44] INFO     ElderWatch           [Frame 1800] FPS=23.0 | State=NORMAL
+[16:17:48] WARNING  ElderWatch           Frame read failed – attempting reconnect...
+[16:17:48] INFO     ElderWatch           Camera opened: datasets/raw/le2i/test_converted.mp4 @ 320x240
+[16:17:55] WARNING  ElderWatch           Frame read failed – attempting reconnect...
+[16:17:55] INFO     ElderWatch           Camera opened: datasets/raw/le2i/test_converted.mp4 @ 320x240
+[16:17:58] INFO     ElderWatch           [Frame 2100] FPS=23.2 | State=NORMAL
+[16:18:03] WARNING  ElderWatch           Frame read failed – attempting reconnect...
+[16:18:03] INFO     ElderWatch           Camera opened: datasets/raw/le2i/test_converted.mp4 @ 320x240
+[16:18:10] WARNING  ElderWatch           Frame read failed – attempting reconnect...
+[16:18:11] INFO     ElderWatch           Camera opened: datasets/raw/le2i/test_converted.mp4 @ 320x240
+[16:18:13] INFO     ElderWatch           [Frame 2400] FPS=21.9 | State=NORMAL
+[16:18:17] INFO     ElderWatch           Keyboard interrupt received.
+[16:18:17] INFO     ElderWatch           Elder Watch stopped.

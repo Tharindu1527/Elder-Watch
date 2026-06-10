@@ -1,0 +1,43 @@
+[15:51:29] INFO     root                 Logging initialized → logs/elder_watch_20260610_155129.log
+[15:51:29] INFO     ElderWatch           Initializing Elder Watch System...
+[15:51:29] INFO     src.preprocessing.frame_processor FrameProcessor: resize=(640,640), CLAHE=True, blur=3
+[15:51:31] INFO     src.detection.yolo_detector Loading PyTorch YOLO model: models/finetuned/yolov8n_fall.pt
+[15:51:31] INFO     src.detection.yolo_detector PyTorch model loaded.
+<frozen importlib._bootstrap>:488: DeprecationWarning: Type google._upb._message.MessageMapContainer uses PyType_Spec with a metaclass that has custom tp_new. This is deprecated and will no longer be allowed in Python 3.14.
+<frozen importlib._bootstrap>:488: DeprecationWarning: Type google._upb._message.ScalarMapContainer uses PyType_Spec with a metaclass that has custom tp_new. This is deprecated and will no longer be allowed in Python 3.14.
+libEGL warning: DRI3 error: Could not get DRI3 device
+libEGL warning: Ensure your X server supports DRI3 to get accelerated rendering
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1781086891.177292 2634075 gl_context_egl.cc:85] Successfully initialized EGL. Major : 1 Minor: 5
+I0000 00:00:1781086891.187232 2634281 gl_context.cc:357] GL version: 3.2 (OpenGL ES 3.2 Mesa 25.2.8-0ubuntu0.24.04.1), renderer: llvmpipe (LLVM 20.1.2, 256 bits)
+[15:51:31] INFO     src.pose.mediapipe_pose MediaPipe Pose initialized (model_complexity=0)
+[15:51:31] INFO     src.preprocessing.optical_flow OpticalFlowAnalyzer: enabled=True, method=farneback
+[15:51:31] INFO     src.classification.fall_classifier FallClassifier initialized.
+[15:51:31] INFO     src.alerts.alert_manager AlertManager initialized. Channels: SMS=False, Email=False, Telegram=False
+[15:51:31] INFO     ElderWatch           All components initialized successfully.
+[mp3float @ 0x483b1940] Header missing
+[mp3float @ 0x483b1940] Header missing
+[mp3float @ 0x483b1940] Header missing
+[15:51:31] INFO     ElderWatch           Camera opened: datasets/raw/le2i/Coffee_room_01/Coffee_room_01/Videos/video (1).avi @ 320x240
+[15:51:31] INFO     ElderWatch           Starting Elder Watch monitoring loop...
+[15:51:31] INFO     ElderWatch           Press Ctrl+C or 'q' to stop.
+INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+W0000 00:00:1781086891.225688 2634196 inference_feedback_manager.cc:114] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
+W0000 00:00:1781086891.230422 2634200 inference_feedback_manager.cc:114] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
+corrupted double-linked list
+Fatal Python error: Aborted
+
+Current thread 0x0000716850fd6080 (most recent call first):
+  File "/home/muscle_hyper/Downloads/files (3)/elder_watch_v2_free_datasets/elder_watch/venv/lib/python3.12/site-packages/torch/cuda/__init__.py", line 187 in is_available
+  File "/home/muscle_hyper/Downloads/files (3)/elder_watch_v2_free_datasets/elder_watch/venv/lib/python3.12/site-packages/ultralytics/utils/torch_utils.py", line 241 in select_device
+  File "/home/muscle_hyper/Downloads/files (3)/elder_watch_v2_free_datasets/elder_watch/venv/lib/python3.12/site-packages/ultralytics/engine/predictor.py", line 404 in setup_model
+  File "/home/muscle_hyper/Downloads/files (3)/elder_watch_v2_free_datasets/elder_watch/venv/lib/python3.12/site-packages/ultralytics/engine/model.py", line 530 in predict
+  File "/home/muscle_hyper/Downloads/files (3)/elder_watch_v2_free_datasets/elder_watch/venv/lib/python3.12/site-packages/ultralytics/engine/model.py", line 177 in __call__
+  File "/home/muscle_hyper/Downloads/files (3)/elder_watch_v2_free_datasets/elder_watch/src/detection/yolo_detector.py", line 148 in _detect_pytorch
+  File "/home/muscle_hyper/Downloads/files (3)/elder_watch_v2_free_datasets/elder_watch/src/detection/yolo_detector.py", line 119 in detect
+  File "/home/muscle_hyper/Downloads/files (3)/elder_watch_v2_free_datasets/elder_watch/main.py", line 122 in process_frame
+  File "/home/muscle_hyper/Downloads/files (3)/elder_watch_v2_free_datasets/elder_watch/main.py", line 211 in run
+  File "/home/muscle_hyper/Downloads/files (3)/elder_watch_v2_free_datasets/elder_watch/main.py", line 259 in main
+  File "/home/muscle_hyper/Downloads/files (3)/elder_watch_v2_free_datasets/elder_watch/main.py", line 263 in <module>
+
+Extension modules: numpy._core._multiarray_umath, numpy.linalg._umath_linalg, yaml._yaml, torch._C, torch._C._dynamo.autograd_compiler, torch._C._dynamo.eval_frame, torch._C._dynamo.guards, torch._C._dynamo.utils, torch._C._fft, torch._C._linalg, torch._C._nested, torch._C._nn, torch._C._sparse, torch._C._special, cuda.bindings._bindings.cydriver, cuda.bindings.cydriver, cuda.bindings.driver, cuda.bindings._bindings.cyruntime_ptds, cuda.bindings._bindings.cyruntime, cuda.bindings.cyruntime, cuda.bindings.runtime, PIL._imaging, PIL._imagingft, kiwisolver._cext, numpy.random._common, numpy.random.bit_generator, numpy.random._bounded_integers, numpy.random._pcg64, numpy.random._generator, numpy.random._mt19937, numpy.random._philox, numpy.random._sfc64, numpy.random.mtrand, google._upb._message, _cffi_backend (total: 35)

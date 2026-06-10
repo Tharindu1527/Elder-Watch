@@ -1,0 +1,22 @@
+[16:23:56] INFO     root                 Logging initialized → logs/elder_watch_20260610_162356.log
+[16:23:56] INFO     ElderWatch           Initializing Elder Watch System...
+[16:23:56] INFO     src.preprocessing.frame_processor FrameProcessor: resize=(640,640), CLAHE=True, blur=3
+[16:23:57] INFO     src.detection.yolo_detector Loading PyTorch YOLO model: models/finetuned/yolov8n_fall.pt
+[16:23:57] INFO     src.detection.yolo_detector PyTorch model loaded.
+[16:23:57] INFO     ElderWatch           YOLO warmup complete.
+[16:23:57] INFO     src.pose.mediapipe_pose MediaPipe disabled - YOLO-only mode.
+[16:23:57] INFO     src.preprocessing.optical_flow OpticalFlowAnalyzer: enabled=True, method=farneback
+[16:23:57] INFO     src.classification.fall_classifier FallClassifier initialized.
+[16:23:57] INFO     src.alerts.alert_manager AlertManager initialized. Channels: SMS=False, Email=False, Telegram=False
+[16:23:57] INFO     ElderWatch           All components initialized successfully.
+[16:23:57] INFO     ElderWatch           Camera opened: datasets/raw/le2i/test_v3.mp4 @ 320x240
+[16:23:57] INFO     ElderWatch           Starting Elder Watch monitoring loop...
+[16:23:57] INFO     ElderWatch           Press Ctrl+C or 'q' to stop.
+[16:24:11] INFO     ElderWatch           [Frame 300] FPS=20.7 | State=NORMAL
+[16:24:11] WARNING  ElderWatch           Frame read failed – attempting reconnect...
+[16:24:12] INFO     ElderWatch           Camera opened: datasets/raw/le2i/test_v3.mp4 @ 320x240
+[16:24:25] INFO     ElderWatch           [Frame 600] FPS=22.5 | State=NORMAL
+[16:24:25] WARNING  ElderWatch           Frame read failed – attempting reconnect...
+[16:24:26] INFO     ElderWatch           Camera opened: datasets/raw/le2i/test_v3.mp4 @ 320x240
+[16:24:27] INFO     ElderWatch           Keyboard interrupt received.
+[16:24:27] INFO     ElderWatch           Elder Watch stopped.

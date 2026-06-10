@@ -1,0 +1,41 @@
+[16:41:47] INFO     root                 Logging initialized → logs/elder_watch_20260610_164147.log
+[16:41:47] INFO     ElderWatch           Initializing Elder Watch System...
+[16:41:47] INFO     src.preprocessing.frame_processor FrameProcessor: resize=(640,640), CLAHE=True, blur=3
+[16:41:48] INFO     src.detection.yolo_detector Loading PyTorch YOLO model: models/finetuned/yolov8n_fall.pt
+[16:41:48] INFO     src.detection.yolo_detector PyTorch model loaded.
+[16:41:48] INFO     ElderWatch           YOLO warmup complete.
+[16:41:48] INFO     src.pose.mediapipe_pose MediaPipe disabled - YOLO-only mode.
+[16:41:48] INFO     src.preprocessing.optical_flow OpticalFlowAnalyzer: enabled=True, method=farneback
+[16:41:48] INFO     src.classification.fall_classifier FallClassifier initialized.
+[16:41:48] INFO     src.alerts.alert_manager AlertManager initialized. Channels: SMS=False, Email=False, Telegram=False
+[16:41:48] INFO     ElderWatch           All components initialized successfully.
+[16:41:48] INFO     ElderWatch           Camera opened: datasets/raw/le2i/test_v5.mp4 @ 320x240
+[16:41:48] INFO     ElderWatch           Starting Elder Watch monitoring loop...
+[16:41:48] INFO     ElderWatch           Press Ctrl+C or 'q' to stop.
+[16:41:49] INFO     src.classification.fall_classifier [Classifier] State: NORMAL → NEAR_FALL | score=2 | indicators=['aspect_ratio=0.75', 'velocity=0.141']
+[16:41:49] INFO     src.classification.fall_classifier [Classifier] No person detected — resetting to NORMAL
+[16:41:49] INFO     src.classification.fall_classifier [Classifier] State: NORMAL → NEAR_FALL | score=2 | indicators=['aspect_ratio=1.09', 'velocity=0.604']
+[16:41:49] INFO     src.classification.fall_classifier [Classifier] No person detected — resetting to NORMAL
+[16:41:49] INFO     src.classification.fall_classifier [Classifier] State: NORMAL → NEAR_FALL | score=2 | indicators=['aspect_ratio=1.09', 'velocity=0.773']
+[16:41:49] INFO     src.classification.fall_classifier [Classifier] No person detected — resetting to NORMAL
+[16:41:51] INFO     src.classification.fall_classifier [Classifier] State: NORMAL → NEAR_FALL | score=4 | indicators=['aspect_ratio=0.72', 'velocity=0.585', 'yolo_fall_class(conf=0.50)']
+[16:41:51] INFO     src.classification.fall_classifier [Classifier] State: NEAR_FALL → FALL_DETECTED | score=4 | indicators=['aspect_ratio=0.83', 'velocity=0.513', 'yolo_fall_class(conf=0.67)']
+[16:41:51] INFO     src.alerts.alert_manager Snapshot saved: logs/snapshots/FALL_DETECTED_2026-06-10_16-41-51.jpg
+[16:41:51] WARNING  src.alerts.alert_manager ALERT #1 triggered: FALL_DETECTED @ 2026-06-10 16:41:51
+[16:41:51] INFO     src.classification.fall_classifier [Classifier] No person detected — resetting to NORMAL
+[16:41:51] INFO     src.classification.fall_classifier [Classifier] State: NORMAL → NEAR_FALL | score=4 | indicators=['aspect_ratio=0.81', 'velocity=0.348', 'yolo_fall_class(conf=0.60)']
+[16:41:52] INFO     src.classification.fall_classifier [Classifier] No person detected — resetting to NORMAL
+[16:41:52] INFO     src.classification.fall_classifier [Classifier] State: NORMAL → NEAR_FALL | score=2 | indicators=['aspect_ratio=0.77', 'velocity=0.165']
+[16:41:52] INFO     src.classification.fall_classifier [Classifier] State: NEAR_FALL → FALL_DETECTED | score=4 | indicators=['aspect_ratio=0.83', 'velocity=0.143', 'yolo_fall_class(conf=0.53)']
+[16:41:53] INFO     src.classification.fall_classifier [Classifier] State: FALL_DETECTED → NORMAL | score=1 | indicators=['aspect_ratio=0.75']
+[16:41:53] INFO     src.classification.fall_classifier [Classifier] State: NORMAL → NEAR_FALL | score=2 | indicators=['aspect_ratio=0.69', 'velocity=0.093']
+[16:41:54] INFO     src.classification.fall_classifier [Classifier] No person detected — resetting to NORMAL
+[16:41:54] INFO     src.classification.fall_classifier [Classifier] State: NORMAL → NEAR_FALL | score=2 | indicators=['aspect_ratio=0.82', 'velocity=0.171']
+[16:41:54] INFO     src.classification.fall_classifier [Classifier] State: NEAR_FALL → FALL_DETECTED | score=4 | indicators=['aspect_ratio=0.81', 'velocity=0.238', 'yolo_fall_class(conf=0.51)']
+[16:41:55] INFO     src.classification.fall_classifier [Classifier] No person detected — resetting to NORMAL
+[16:41:55] INFO     src.classification.fall_classifier [Classifier] State: NORMAL → NEAR_FALL | score=2 | indicators=['aspect_ratio=0.81', 'velocity=0.335']
+[16:41:55] INFO     src.classification.fall_classifier [Classifier] No person detected — resetting to NORMAL
+[16:41:55] INFO     src.classification.fall_classifier [Classifier] State: NORMAL → NEAR_FALL | score=2 | indicators=['aspect_ratio=1.12', 'velocity=0.314']
+[16:41:55] INFO     src.classification.fall_classifier [Classifier] State: NEAR_FALL → FALL_DETECTED | score=4 | indicators=['aspect_ratio=1.00', 'velocity=0.308', 'yolo_fall_class(conf=0.76)']
+[16:41:57] INFO     ElderWatch           Video file ended.
+[16:41:57] INFO     ElderWatch           Elder Watch stopped.

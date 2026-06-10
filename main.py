@@ -4,6 +4,11 @@ Elder Watch - Computer Vision-Based Elder Monitoring System
 University of Ruhuna | EE7204 / EC7205
 Main entry point
 """
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = ""
+os.environ["XNNPACK_FORCE_DISABLE"] = "1"
+os.environ["TFLITE_DISABLE_XNNPACK"] = "1"
+os.environ["MEDIAPIPE_DISABLE_GPU"] = "1"
 
 import argparse
 import logging
@@ -53,9 +58,9 @@ def parse_args():
 class ElderWatchSystem:
     """
     Main orchestrator for the Elder Watch fall detection pipeline.
-    
+
     Pipeline:
-        Camera → Preprocess → YOLO Detect → MediaPipe Pose → 
+        Camera → Preprocess → YOLO Detect → (MediaPipe Pose if enabled) →
         Optical Flow → Classify → Alert
     """
 
@@ -70,6 +75,13 @@ class ElderWatchSystem:
         # ── Components ──────────────────────────────────────────────
         self.frame_processor = FrameProcessor(config["preprocessing"])
         self.yolo_detector   = YOLODetector(config["yolo"])
+
+        # Warm up YOLO — forces XNNPACK/TFLite to fully init BEFORE MediaPipe
+        import numpy as np
+        _dummy = np.zeros((640, 640, 3), dtype=np.uint8)
+        self.yolo_detector.detect(_dummy)
+        self.logger.info("YOLO warmup complete.")
+
         self.pose_estimator  = MediaPipePoseEstimator(config["mediapipe"])
         self.flow_analyzer   = OpticalFlowAnalyzer(config["preprocessing"])
         self.classifier      = FallClassifier(config["classification"])
@@ -100,9 +112,9 @@ class ElderWatchSystem:
 
         # Apply camera settings if it's a live camera
         if isinstance(source, int):
-            cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.config["camera"]["width"])
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH,  self.config["camera"]["width"])
             cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.config["camera"]["height"])
-            cap.set(cv2.CAP_PROP_FPS, self.config["camera"]["fps"])
+            cap.set(cv2.CAP_PROP_FPS,          self.config["camera"]["fps"])
             cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)  # Minimize latency on RPi
 
         self.logger.info(f"Camera opened: {source} @ "
@@ -118,12 +130,12 @@ class ElderWatchSystem:
         # 1. Preprocessing
         processed = self.frame_processor.process(frame)
 
-        # 2. YOLO detection: returns list of {bbox, class, confidence}
+        # 2. YOLO detection — keep both 'person' and 'fall' class detections
         detections = self.yolo_detector.detect(processed)
-        person_detections = [d for d in detections if d["class"] == "person"]
+        person_detections = [d for d in detections if d["class"] in ("person", "fall")]
 
         if not person_detections:
-            # No person visible – reset classifier state
+            # No person visible — reset classifier state
             self.classifier.reset_state()
             self.flow_analyzer.update(processed)
             return frame, "NORMAL", []
@@ -131,36 +143,56 @@ class ElderWatchSystem:
         # 3. Optical flow for motion analysis
         flow_magnitude = self.flow_analyzer.update(processed)
 
-        # 4. For each detected person, run pose estimation
+        # 4. Build feature dicts — use MediaPipe pose if enabled, else YOLO-only
         pose_features_list = []
+        img_h, img_w = processed.shape[:2]
+
         for det in person_detections:
             x1, y1, x2, y2 = det["bbox"]
-            # Crop with a small margin
-            h, w = processed.shape[:2]
-            margin = 20
-            x1c = max(0, x1 - margin)
-            y1c = max(0, y1 - margin)
-            x2c = min(w, x2 + margin)
-            y2c = min(h, y2 + margin)
+            landmarks    = None
+            pose_features = None
 
-            crop = processed[y1c:y2c, x1c:x2c]
-            if crop.size == 0:
-                continue
+            # --- Try MediaPipe if it is enabled ---
+            if self.pose_estimator._pose is not None:
+                margin = 20
+                x1c = max(0, x1 - margin)
+                y1c = max(0, y1 - margin)
+                x2c = min(img_w, x2 + margin)
+                y2c = min(img_h, y2 + margin)
+                crop = processed[y1c:y2c, x1c:x2c]
+                if crop.size > 0:
+                    landmarks, pose_features = self.pose_estimator.estimate(crop)
+                    if pose_features:
+                        pose_features["bbox"]           = det["bbox"]
+                        pose_features["class"]          = det["class"]
+                        pose_features["det_confidence"] = det["confidence"]
+                        pose_features["flow_magnitude"] = flow_magnitude
+                        pose_features["landmarks"]      = landmarks
+                        pose_features["crop_offset"]    = (x1c, y1c)
 
-            landmarks, pose_features = self.pose_estimator.estimate(crop)
-            if pose_features:
-                pose_features["bbox"] = det["bbox"]
-                pose_features["det_confidence"] = det["confidence"]
-                pose_features["flow_magnitude"] = flow_magnitude
-                pose_features["landmarks"] = landmarks
-                pose_features["crop_offset"] = (x1c, y1c)
-                pose_features_list.append(pose_features)
+            # --- YOLO-only fallback (MediaPipe disabled or no landmarks found) ---
+            if pose_features is None:
+                bw = max(x2 - x1, 1)
+                bh = max(y2 - y1, 1)
+                pose_features = {
+                    "bbox":             det["bbox"],
+                    "class":            det["class"],
+                    "det_confidence":   det["confidence"],
+                    "flow_magnitude":   flow_magnitude,
+                    "aspect_ratio":     bh / bw,
+                    "com_y":            ((y1 + y2) / 2) / img_h,
+                    "torso_angle_deg":  0.0,
+                    "avg_knee_angle":   180.0,
+                    "head_below_hips":  False,
+                    "velocity":         flow_magnitude,
+                    "landmarks":        None,
+                    "crop_offset":      (x1, y1),
+                }
+
+            pose_features_list.append(pose_features)
 
         # 5. Classification
-        if pose_features_list:
-            fall_state = self.classifier.classify(pose_features_list)
-        else:
-            fall_state = "NORMAL"
+        fall_state = self.classifier.classify(pose_features_list) if pose_features_list else "NORMAL"
 
         # 6. Trigger alert if needed
         if fall_state in ("FALL_DETECTED", "INACTIVE_ALERT"):
@@ -193,6 +225,11 @@ class ElderWatchSystem:
             while self.running:
                 ret, frame = cap.read()
                 if not ret:
+                    # Clean exit for finite video files
+                    if isinstance(source, str) and not source.startswith("rtsp"):
+                        self.logger.info("Video file ended.")
+                        break
+                    # Live camera — attempt reconnect
                     self.logger.warning("Frame read failed – attempting reconnect...")
                     time.sleep(0.5)
                     cap.release()

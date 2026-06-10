@@ -4,12 +4,12 @@
 # Install: pip install -r requirements.txt
 
 # Core
-numpy>=1.24.0
+numpy>=1.24.0,<2.0
 PyYAML>=6.0
 Pillow>=10.0.0
 
-# Computer Vision
-opencv-python>=4.8.0
+# Computer Vision — headless only, avoids conflict with mediapipe
+opencv-python-headless>=4.8.0
 
 # MediaPipe
 mediapipe>=0.10.0
@@ -18,9 +18,6 @@ mediapipe>=0.10.0
 ultralytics>=8.0.200
 torch>=2.1.0
 torchvision>=0.16.0
-
-# TensorFlow (for quantization export)
-tensorflow>=2.14.0
 
 # Alerts
 twilio>=8.0.0

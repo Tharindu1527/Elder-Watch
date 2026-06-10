@@ -49,9 +49,13 @@ class MediaPipePoseEstimator:
         self._init_mediapipe()
 
     def _init_mediapipe(self):
+        if not self.config.get("enabled", True):
+            logger.info("MediaPipe disabled - YOLO-only mode.")
+            self._pose = None
+            return
         try:
             import mediapipe as mp
-            self._mp_pose   = mp.solutions.pose
+            self._mp_pose    = mp.solutions.pose
             self._mp_drawing = mp.solutions.drawing_utils
             self._pose = self._mp_pose.Pose(
                 min_detection_confidence=self.config.get("min_detection_confidence", 0.5),

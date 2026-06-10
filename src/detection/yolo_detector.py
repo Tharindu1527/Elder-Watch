@@ -93,12 +93,14 @@ class YOLODetector:
                     f"scale={self.input_scale:.6f}, zp={self.input_zero_point}")
 
     def _load_pytorch(self, path: str):
-        """Load Ultralytics YOLOv8 .pt model."""
         try:
             from ultralytics import YOLO
         except ImportError:
-            raise RuntimeError("ultralytics package not installed. "
-                               "Run: pip install ultralytics")
+            raise RuntimeError("ultralytics package not installed.")
+        
+        import os
+        os.environ["CUDA_VISIBLE_DEVICES"] = ""  # ADD THIS LINE
+        
         logger.info(f"Loading PyTorch YOLO model: {path}")
         self.pt_model = YOLO(path)
         self.backend  = "pytorch"
@@ -146,7 +148,8 @@ class YOLODetector:
     def _detect_pytorch(self, frame: np.ndarray) -> List[Dict]:
         """PyTorch / Ultralytics inference path."""
         results = self.pt_model(frame, conf=self.conf_thresh,
-                                iou=self.nms_thresh, verbose=False)
+                                iou=self.nms_thresh, verbose=False,
+                                device="cpu")
         detections = []
         for r in results:
             for box in r.boxes:

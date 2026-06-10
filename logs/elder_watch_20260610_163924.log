@@ -1,0 +1,24 @@
+[16:39:24] INFO     root                 Logging initialized → logs/elder_watch_20260610_163924.log
+[16:39:24] INFO     ElderWatch           Initializing Elder Watch System...
+[16:39:24] INFO     src.preprocessing.frame_processor FrameProcessor: resize=(640,640), CLAHE=True, blur=3
+[16:39:25] INFO     src.detection.yolo_detector Loading PyTorch YOLO model: models/finetuned/yolov8n_fall.pt
+[16:39:26] INFO     src.detection.yolo_detector PyTorch model loaded.
+[16:39:26] INFO     ElderWatch           YOLO warmup complete.
+[16:39:26] INFO     src.pose.mediapipe_pose MediaPipe disabled - YOLO-only mode.
+[16:39:26] INFO     src.preprocessing.optical_flow OpticalFlowAnalyzer: enabled=True, method=farneback
+[16:39:26] INFO     src.classification.fall_classifier FallClassifier initialized.
+[16:39:26] INFO     src.alerts.alert_manager AlertManager initialized. Channels: SMS=False, Email=False, Telegram=False
+[16:39:26] INFO     ElderWatch           All components initialized successfully.
+[16:39:26] INFO     ElderWatch           Camera opened: datasets/raw/le2i/test_v2.mp4 @ 320x240
+[16:39:26] INFO     ElderWatch           Starting Elder Watch monitoring loop...
+[16:39:26] INFO     ElderWatch           Press Ctrl+C or 'q' to stop.
+[16:39:26] INFO     src.classification.fall_classifier [Classifier] State: NORMAL → NEAR_FALL | score=4 | indicators=['aspect_ratio=0.84', 'velocity=0.227', 'yolo_fall_class(conf=0.63)']
+[16:39:26] INFO     src.classification.fall_classifier [Classifier] State: NEAR_FALL → FALL_DETECTED | score=4 | indicators=['aspect_ratio=0.84', 'velocity=0.175', 'yolo_fall_class(conf=0.57)']
+[16:39:26] INFO     src.alerts.alert_manager Snapshot saved: logs/snapshots/FALL_DETECTED_2026-06-10_16-39-26.jpg
+[16:39:26] WARNING  src.alerts.alert_manager ALERT #1 triggered: FALL_DETECTED @ 2026-06-10 16:39:26
+[16:39:27] INFO     src.classification.fall_classifier [Classifier] No person detected — resetting to NORMAL
+[16:39:34] INFO     src.classification.fall_classifier [Classifier] State: NORMAL → NEAR_FALL | score=4 | indicators=['aspect_ratio=1.11', 'velocity=0.287', 'yolo_fall_class(conf=0.51)']
+[16:39:35] INFO     src.classification.fall_classifier [Classifier] State: NEAR_FALL → FALL_DETECTED | score=4 | indicators=['aspect_ratio=1.03', 'velocity=0.265', 'yolo_fall_class(conf=0.76)']
+[16:39:39] INFO     ElderWatch           [Frame 300] FPS=26.6 | State=FALL_DETECTED
+[16:39:39] INFO     ElderWatch           Video file ended.
+[16:39:39] INFO     ElderWatch           Elder Watch stopped.
