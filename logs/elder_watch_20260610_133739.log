@@ -1,0 +1,3 @@
+[13:37:39] INFO     root                 Logging initialized → logs/elder_watch_20260610_133739.log
+[13:37:39] INFO     ElderWatch           Initializing Elder Watch System...
+[13:37:39] INFO     src.preprocessing.frame_processor FrameProcessor: resize=(640,640), CLAHE=True, blur=3

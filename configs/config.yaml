@@ -18,8 +18,9 @@ camera:
   mounted: "ceiling"          # options: ceiling, wall, desk
 
 yolo:
-  model_path: "models/quantized/yolov8n_fall_int8.tflite"
+  model_path: "models/finetuned/yolov8n_fall.pt"    # ← change this
   fallback_model: "models/finetuned/yolov8n_fall.pt"
+  use_tflite: false
   input_size: 640
   confidence_threshold: 0.50  # For person detection (Stage 1)
   fall_confidence_threshold: 0.70  # For fall class (Stage 2)
@@ -27,7 +28,6 @@ yolo:
   classes:
     - person
     - fall
-  use_tflite: true             # Set false on desktop for .pt
 
 mediapipe:
   min_detection_confidence: 0.5

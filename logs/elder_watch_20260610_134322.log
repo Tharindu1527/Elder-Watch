@@ -1,0 +1,13 @@
+[13:43:22] INFO     root                 Logging initialized → logs/elder_watch_20260610_134322.log
+[13:43:22] INFO     ElderWatch           Initializing Elder Watch System...
+[13:43:22] INFO     src.preprocessing.frame_processor FrameProcessor: resize=(640,640), CLAHE=True, blur=3
+[13:43:24] INFO     src.detection.yolo_detector Loading PyTorch YOLO model: models/finetuned/yolov8n_fall.pt
+[13:43:24] INFO     src.detection.yolo_detector PyTorch model loaded.
+[13:43:24] INFO     src.pose.mediapipe_pose MediaPipe Pose initialized (model_complexity=0)
+[13:43:24] INFO     src.preprocessing.optical_flow OpticalFlowAnalyzer: enabled=True, method=farneback
+[13:43:24] INFO     src.classification.fall_classifier FallClassifier initialized.
+[13:43:24] INFO     src.alerts.alert_manager AlertManager initialized. Channels: SMS=False, Email=False, Telegram=False
+[13:43:24] INFO     ElderWatch           All components initialized successfully.
+[13:43:24] INFO     ElderWatch           Camera opened: datasets/raw/le2i/Coffee_room_01/Coffee_room_01/Videos/video (1).avi @ 320x240
+[13:43:24] INFO     ElderWatch           Starting Elder Watch monitoring loop...
+[13:43:24] INFO     ElderWatch           Press Ctrl+C or 'q' to stop.

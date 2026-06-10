@@ -1,0 +1,10 @@
+[13:35:22] INFO     root                 Logging initialized → logs/elder_watch_20260610_133522.log
+[13:35:22] INFO     ElderWatch           Initializing Elder Watch System...
+[13:35:22] INFO     src.preprocessing.frame_processor FrameProcessor: resize=(640,640), CLAHE=True, blur=3
+[13:35:23] INFO     src.detection.yolo_detector Loading TFLite model: models/quantized/yolov8n_fall_int8.tflite
+[13:35:23] INFO     src.detection.yolo_detector TFLite model loaded. dtype=float32, scale=1.000000, zp=0
+[13:35:23] INFO     src.pose.mediapipe_pose MediaPipe Pose initialized (model_complexity=0)
+[13:35:23] INFO     src.preprocessing.optical_flow OpticalFlowAnalyzer: enabled=True, method=farneback
+[13:35:23] INFO     src.classification.fall_classifier FallClassifier initialized.
+[13:35:23] INFO     src.alerts.alert_manager AlertManager initialized. Channels: SMS=False, Email=False, Telegram=False
+[13:35:23] INFO     ElderWatch           All components initialized successfully.
